@@ -91,17 +91,37 @@ ai.models.generateContent = async (args) => {
 
 const geminiOutput = await processAudioWithGemini(testMockWav);
 
-assert.strictEqual(capturedGeminiArgs.model, 'gemini-3.6-flash');
+assert.strictEqual(capturedGeminiArgs.model, 'gemini-3.7-flash');
 assert.strictEqual(capturedGeminiArgs.contents[0].inlineData.mimeType, 'audio/wav');
 assert(typeof capturedGeminiArgs.contents[0].inlineData.data === 'string');
 assert(capturedGeminiArgs.contents[1].text.includes('conversational Bangladeshi Bengali'));
 assert(geminiOutput.includes('📌 *Summary:*'));
 assert(geminiOutput.includes('📝 *Full Transcript:*'));
 
+// Test 503 failover: gemini-3.7-flash throws 503, fails over to gemini-3.6-flash
+let failoverAttempts = [];
+ai.models.generateContent = async (args) => {
+  failoverAttempts.push(args.model);
+  if (args.model === 'gemini-3.7-flash') {
+    const err = new Error('This model is currently experiencing high demand');
+    err.status = 503;
+    throw err;
+  }
+  return {
+    text: '📌 *Summary:*\n• সফল ব্যাকআপ মডেল ট্রানজিশন\n\n---\n📝 *Full Transcript:*\nব্যাকআপ মডেল সফলভাবে কাজ করেছে।',
+  };
+};
+
+fs.writeFileSync(testMockWav, 'RIFF-mock-wav-audio-content');
+const failoverOutput = await processAudioWithGemini(testMockWav);
+assert(failoverAttempts.includes('gemini-3.7-flash'));
+assert(failoverAttempts.includes('gemini-3.6-flash'));
+assert(failoverOutput.includes('ব্যাকআপ মডেল'));
+
 // Restore original method
 ai.models.generateContent = origGenerateContent;
 cleanupFiles(testMockWav);
-console.log('✓ processAudioWithGemini multimodal pipeline verified');
+console.log('✓ processAudioWithGemini multimodal pipeline & 503 fallback verified');
 
 // Test 5: HTTP Server Verification & Webhook Endpoints
 console.log('Test 5: HTTP Server Endpoints');
