@@ -1,0 +1,14 @@
+name: Keep Render Bot Awake
+
+on:
+  schedule:
+    # Runs every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Webhook URL
+        run: curl -s https://transcribe-bot-ys5h.onrender.com/webhook > /dev/null
