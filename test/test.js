@@ -91,18 +91,18 @@ ai.models.generateContent = async (args) => {
 
 const geminiOutput = await processAudioWithGemini(testMockWav);
 
-assert.strictEqual(capturedGeminiArgs.model, 'gemini-3.7-flash');
+assert.strictEqual(capturedGeminiArgs.model, 'gemini-3.5-transcribe');
 assert.strictEqual(capturedGeminiArgs.contents[0].inlineData.mimeType, 'audio/wav');
 assert(typeof capturedGeminiArgs.contents[0].inlineData.data === 'string');
 assert(capturedGeminiArgs.contents[1].text.includes('conversational Bangladeshi Bengali'));
 assert(geminiOutput.includes('📌 *Summary:*'));
 assert(geminiOutput.includes('📝 *Full Transcript:*'));
 
-// Test 503 failover: gemini-3.7-flash throws 503, fails over to gemini-3.6-flash
+// Test 503 failover: gemini-3.5-transcribe throws 503, fails over to gemini-3.7-flash
 let failoverAttempts = [];
 ai.models.generateContent = async (args) => {
   failoverAttempts.push(args.model);
-  if (args.model === 'gemini-3.7-flash') {
+  if (args.model === 'gemini-3.5-transcribe') {
     const err = new Error('This model is currently experiencing high demand');
     err.status = 503;
     throw err;
@@ -114,8 +114,8 @@ ai.models.generateContent = async (args) => {
 
 fs.writeFileSync(testMockWav, 'RIFF-mock-wav-audio-content');
 const failoverOutput = await processAudioWithGemini(testMockWav);
-assert(failoverAttempts.includes('gemini-3.7-flash'));
-assert(failoverAttempts.includes('gemini-3.6-flash'));
+assert(failoverAttempts.includes('gemini-3.5-transcribe'));
+assert(failoverAttempts.includes('gemini-3.7-flash'), 'Should have tried gemini-3.7-flash as fallback');
 assert(failoverOutput.includes('ব্যাকআপ মডেল'));
 
 // Restore original method
