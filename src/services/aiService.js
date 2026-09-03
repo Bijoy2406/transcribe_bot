@@ -48,7 +48,12 @@ export async function processAudioWithGemini(audioFilePath) {
     try {
       console.log(`Routing audio to: ${model}`);
       const response = await callGemini(model, base64Audio);
-      if (response && response.text) {
+      
+      // gemini-3.5-transcribe returns audioTranscription instead of text
+      if (response?.audioTranscription) {
+        return response.audioTranscription;
+      }
+      if (response?.text) {
         return response.text;
       }
     } catch (error) {
